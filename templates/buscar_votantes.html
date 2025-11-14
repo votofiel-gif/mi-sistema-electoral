@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar Votantes - Sistema Electoral</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .search-card {
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .result-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #007bff;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .search-tabs {
+            border-bottom: 2px solid #e9ecef;
+        }
+        .search-tab {
+            border: none;
+            background: none;
+            padding: 12px 20px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .search-tab.active {
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+        }
+        .search-input {
+            border-radius: 25px;
+            border: 2px solid #e9ecef;
+            padding: 12px 20px;
+            font-size: 16px;
+        }
+        .search-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        }
+        .btn-search {
+            border-radius: 25px;
+            padding: 12px 25px;
+            font-weight: 500;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .cedula-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+        .actions-buttons .btn {
+            margin: 0 2px;
+            padding: 4px 8px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    {% include 'base.html' %}
+
+    <div class="container-fluid mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card search-card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Buscar Votantes
+                        </h3>
+                        <small>Busca votantes por nombre completo o número de cédula</small>
+                    </div>
+                    
+                    <div class="card-body">
+                        <form method="POST" id="searchForm">
+                            <ul class="nav nav-tabs search-tabs mb-4" id="searchTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="search-tab active" id="nombre-tab" 
+                                            data-bs-toggle="tab" data-bs-target="#busqueda-nombre" 
+                                            type="button" role="tab">
+                                        <i class="fas fa-user me-1"></i>
+                                        Por Nombre
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="search-tab" id="cedula-tab" 
+                                            data-bs-toggle="tab" data-bs-target="#busqueda-cedula" 
+                                            type="button" role="tab">
+                                        <i class="fas fa-id-card me-1"></i>
+                                        Por Cédula
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content">
+                                <div class="tab-pane fade show active" id="busqueda-nombre" role="tabpanel">
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control search-input" 
+                                               id="busqueda_nombre" name="busqueda_nombre" 
+                                               placeholder="Ingresa el nombre completo o parcial del votante">
+                                        <button class="btn btn-outline-primary btn-search" type="submit">
+                                            <i class="fas fa-search me-1"></i>
+                                            Buscar
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="busqueda-cedula" role="tabpanel">
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control search-input" 
+                                               id="busqueda_cedula" name="busqueda_cedula" 
+                                               placeholder="Ingresa el número de cédula (puede ser parcial)">
+                                        <button class="btn btn-outline-primary btn-search" type="submit">
+                                            <i class="fas fa-search me-1"></i>
+                                            Buscar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        {% if busqueda_realizada %}
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>
+                                    Resultados de la Búsqueda
+                                    {% if votantes_encontrados %}
+                                        <span class="badge bg-primary">{{ votantes_encontrados|length }}</span>
+                                    {% endif %}
+                                </h5>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                        onclick="limpiarBusqueda()">
+                                    <i class="fas fa-eraser me-1"></i>
+                                    Nueva Búsqueda
+                                </button>
+                            </div>
+
+                            {% if votantes_encontrados %}
+                                <div class="row">
+                                    {% for votante in votantes_encontrados %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card result-card h-100">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <h6 class="card-title mb-0 text-primary">
+                                                            <i class="fas fa-user me-1"></i>
+                                                            {{ votante.nombre_completo }}
+                                                        </h6>
+                                                        {% if votante.numero_cedula %}
+                                                            <span class="cedula-badge">
+                                                                <i class="fas fa-id-card me-1"></i>
+                                                                {{ votante.numero_cedula }}
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <div class="small text-muted mb-2">
+                                                        <i class="fas fa-user-tie me-1"></i>
+                                                        Registrado por: {{ votante.colaborador }}
+                                                    </div>
+                                                    
+                                                    {% if votante.telefono %}
+                                                        <div class="small mb-1">
+                                                            <i class="fas fa-phone me-1 text-success"></i>
+                                                            {{ votante.telefono }}
+                                                        </div>
+                                                    {% endif %}
+                                                    
+                                                    {% if votante.direccion %}
+                                                        <div class="small mb-2">
+                                                            <i class="fas fa-map-marker-alt me-1 text-danger"></i>
+                                                            {{ votante.direccion }}
+                                                        </div>
+                                                    {% endif %}
+                                                    
+                                                    <div class="small text-muted mb-3">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        {{ votante.fecha_registro.strftime('%d/%m/%Y %H:%M') if votante.fecha_registro else 'Fecha no disponible' }}
+                                                    </div>
+                                                    
+                                                    <div class="actions-buttons">
+                                                        {% if session.rol == 'colaborador' and votante.colaborador_id == session.user_id %}
+                                                            <a href="{{ url_for('editar_votante', votante_id=votante.id) }}" 
+                                                               class="btn btn-outline-primary btn-sm">
+                                                                <i class="fas fa-edit me-1"></i>
+                                                                Editar
+                                                            </a>
+                                                            <a href="{{ url_for('eliminar_votante', votante_id=votante.id) }}" 
+                                                               class="btn btn-outline-danger btn-sm"
+                                                               onclick="return confirm('¿Estás seguro de eliminar este votante?')">
+                                                                <i class="fas fa-trash me-1"></i>
+                                                                Eliminar
+                                                            </a>
+                                                        {% endif %}
+                                                        
+                                                        {% if votante.latitud and votante.longitud %}
+                                                            <button type="button" class="btn btn-outline-info btn-sm" 
+                                                                    onclick="mostrarUbicacion({{ votante.latitud }}, {{ votante.longitud }}, '{{ votante.nombre_completo }}')">
+                                                                <i class="fas fa-map-marked-alt me-1"></i>
+                                                                Ver Ubicación
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="no-results">
+                                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                    <h5>No se encontraron resultados</h5>
+                                    <p class="text-muted">Intenta con otros términos de búsqueda o verifica la ortografía.</p>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar ubicación -->
+    <div class="modal fade" id="ubicacionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-map-marked-alt me-2"></i>
+                        Ubicación del Votante
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="mapa-ubicacion" style="height: 400px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+    <script>
+        // Función para limpiar búsqueda
+        function limpiarBusqueda() {
+            document.getElementById('busqueda_nombre').value = '';
+            document.getElementById('busqueda_cedula').value = '';
+            window.location.href = '{{ url_for("buscar_votantes") }}';
+        }
+
+        // Función para mostrar ubicación
+        function mostrarUbicacion(lat, lng, nombre) {
+            const modal = new bootstrap.Modal(document.getElementById('ubicacionModal'));
+            modal.show();
+            
+            // Inicializar mapa cuando el modal se abra
+            setTimeout(() => {
+                const map = L.map('mapa-ubicacion').setView([lat, lng], 15);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+                
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`<b>${nombre}</b><br/>Ubicación registrada`)
+                    .openPopup();
+            }, 300);
+        }
+
+        // Manejar tabs de búsqueda
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (event) {
+                const target = event.target.getAttribute('data-bs-target');
+                
+                // Limpiar inputs cuando se cambie de tab
+                if (target === '#busqueda-nombre') {
+                    document.getElementById('busqueda_cedula').value = '';
+                    ocultarResultados();
+                } else if (target === '#busqueda-cedula') {
+                    document.getElementById('busqueda_nombre').value = '';
+                    ocultarResultados();
+                }
+                
+                // Focus en el input activo
+                setTimeout(() => {
+                    const activeTab = document.querySelector('.tab-pane.active');
+                    if (activeTab) {
+                        const input = activeTab.querySelector('input[type="text"]');
+                        if (input) input.focus();
+                    }
+                }, 100);
+            });
+        });
+
+        // Búsqueda en tiempo real mejorada
+        let searchTimeout;
+        let currentSearchInput = null;
+
+        document.getElementById('busqueda_nombre').addEventListener('input', function() {
+            currentSearchInput = 'nombre';
+            buscarTiempoReal(this.value);
+        });
+
+        document.getElementById('busqueda_cedula').addEventListener('input', function() {
+            currentSearchInput = 'cedula';
+            buscarTiempoReal(this.value);
+        });
+
+        function buscarTiempoReal(valor) {
+            // Limpiar timeout anterior
+            clearTimeout(searchTimeout);
+            
+            // Si está vacío, ocultar resultados
+            if (!valor || valor.length < (currentSearchInput === 'nombre' ? 3 : 2)) {
+                ocultarResultados();
+                return;
+            }
+            
+            // Esperar un poco antes de hacer la búsqueda (debounce)
+            searchTimeout = setTimeout(() => {
+                realizarBusqueda(currentSearchInput, valor);
+            }, 300);
+        }
+
+        function realizarBusqueda(tipo, valor) {
+            // Mostrar indicador de carga
+            mostrarCargando(true);
+            
+            fetch(`/api/buscar/votantes?tipo=${tipo}&q=${encodeURIComponent(valor)}`)
+                .then(response => response.json())
+                .then(data => {
+                    mostrarResultados(data, tipo);
+                })
+                .catch(error => {
+                    console.error('Error en búsqueda:', error);
+                    mostrarError('Error al realizar la búsqueda');
+                })
+                .finally(() => {
+                    mostrarCargando(false);
+                });
+        }
+
+        function mostrarResultados(resultados, tipo) {
+            // Remover resultados anteriores
+            const resultadosAnteriores = document.getElementById('resultados-tiempo-real');
+            if (resultadosAnteriores) {
+                resultadosAnteriores.remove();
+            }
+            
+            if (!resultados || resultados.length === 0) {
+                mostrarMensajeNoResultados();
+                return;
+            }
+            
+            // Crear contenedor de resultados
+            const container = document.createElement('div');
+            container.id = 'resultados-tiempo-real';
+            container.className = 'alert alert-info mt-3';
+            
+            const titulo = tipo === 'nombre' ? 'Resultados por Nombre' : 'Resultados por Cédula';
+            
+            let html = `<h6><i class="fas fa-search me-2"></i>${titulo} (${resultados.length} encontrados)</h6>`;
+            html += '<div class="row">';
+            
+            resultados.forEach(resultado => {
+                html += `
+                    <div class="col-md-6 mb-2">
+                        <div class="card card-body py-2 border-primary">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong class="text-primary">${resultado.nombre}</strong><br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-id-card me-1"></i>Cédula: ${resultado.cedula}
+                                    </small>
+                                    ${resultado.telefono ? `<br><small><i class="fas fa-phone me-1"></i>Tel: ${resultado.telefono}</small>` : ''}
+                                    ${resultado.fecha ? `<br><small><i class="fas fa-calendar me-1"></i>Registrado: ${resultado.fecha}</small>` : ''}
+                                    ${resultado.direccion ? `<br><small><i class="fas fa-map-marker-alt me-1 text-danger"></i>${resultado.direccion.substring(0, 50)}${resultado.direccion.length > 50 ? '...' : ''}</small>` : ''}
+                                </div>
+                                <div>
+                                    <a href="/votante/${resultado.id}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            // Insertar después del formulario
+            const form = document.getElementById('searchForm');
+            form.parentNode.insertBefore(container, form.nextSibling);
+        }
+
+        function mostrarCargando(mostrar) {
+            let spinner = document.getElementById('search-spinner');
+            
+            if (mostrar) {
+                if (!spinner) {
+                    spinner = document.createElement('div');
+                    spinner.id = 'search-spinner';
+                    spinner.className = 'text-center mt-2';
+                    spinner.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Buscando...';
+                    
+                    const form = document.getElementById('searchForm');
+                    form.parentNode.insertBefore(spinner, form.nextSibling);
+                }
+            } else {
+                if (spinner) {
+                    spinner.remove();
+                }
+            }
+        }
+
+        function mostrarMensajeNoResultados() {
+            const container = document.getElementById('resultados-tiempo-real');
+            if (container) container.remove();
+            
+            const mensaje = document.createElement('div');
+            mensaje.id = 'resultados-tiempo-real';
+            mensaje.className = 'alert alert-warning mt-3';
+            mensaje.innerHTML = '<i class="fas fa-info-circle me-2"></i>No se encontraron resultados que coincidan con tu búsqueda.';
+            
+            const form = document.getElementById('searchForm');
+            form.parentNode.insertBefore(mensaje, form.nextSibling);
+        }
+
+        function ocultarResultados() {
+            const resultados = document.getElementById('resultados-tiempo-real');
+            if (resultados) {
+                resultados.remove();
+            }
+        }
+
+        function mostrarError(mensaje) {
+            ocultarResultados();
+            const error = document.createElement('div');
+            error.id = 'resultados-tiempo-real';
+            error.className = 'alert alert-danger mt-3';
+            error.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${mensaje}`;
+            
+            const form = document.getElementById('searchForm');
+            form.parentNode.insertBefore(error, form.nextSibling);
+        }
+
+        // Auto-focus en el campo de búsqueda
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if not busqueda_realizada %}
+                document.getElementById('busqueda_nombre').focus();
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

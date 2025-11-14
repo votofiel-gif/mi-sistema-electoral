@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Colaborador{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-list me-2"></i>Mis Votantes Registrados</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('nuevo_votante') }}" class="btn btn-success btn-lg me-2">
+            <i class="fas fa-plus-circle me-2"></i>Nuevo Votante
+        </a>
+        <a href="{{ url_for('buscar_votantes') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-search me-2"></i>Buscar Votantes
+        </a>
+    </div>
+</div>
+
+<!-- Estadística -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="stat-card">
+            <div class="icon text-primary">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="number">{{ total_registrados }}</div>
+            <div class="label">Votantes que has registrado</div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de votantes -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-address-book me-2"></i>Listado de Votantes</h5>
+    </div>
+    <div class="card-body">
+        {% if votantes %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Nombre</th>
+                        <th>Cédula</th>
+                        <th>Teléfono</th>
+                        <th>Dirección</th>
+                        <th>Escuela</th>
+                        <th>Fecha Registro</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for votante in votantes %}
+                    <tr>
+                        <td>
+                            {% if votante.foto %}
+                            <img src="{{ url_for('uploaded_file', filename=votante.foto) }}" 
+                                 alt="Foto" class="foto-votante-thumbnail"
+                                 onclick="mostrarFoto('{{ url_for('uploaded_file', filename=votante.foto) }}', '{{ votante.nombre_completo }}', '{{ votante.numero_cedula or '' }}')">
+                            {% else %}
+                            <div class="foto-votante-thumbnail bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ votante.nombre_completo }}</strong></td>
+                        <td>
+                            {% if votante.numero_cedula %}
+                            <span class="badge bg-info">{{ votante.numero_cedula }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if votante.telefono %}
+                            <a href="tel:{{ votante.telefono }}" class="text-decoration-none">
+                                <i class="fas fa-phone me-1"></i>{{ votante.telefono }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if votante.direccion %}
+                            <i class="fas fa-map-marker-alt me-1"></i>{{ votante.direccion }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if votante.escuela_votacion %}
+                            <i class="fas fa-school me-1"></i>{{ votante.escuela_votacion }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ votante.fecha_registro[:10] }}
+                            </small>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('editar_votante', votante_id=votante.id) }}" 
+                               class="btn btn-sm btn-primary me-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('eliminar_votante', votante_id=votante.id) }}" 
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('¿Estás seguro de eliminar este votante?')"
+                               title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">No has registrado votantes aún</h5>
+            <p class="text-muted">Comienza registrando tu primer votante</p>
+            <a href="{{ url_for('nuevo_votante') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>Registrar Primer Votante
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

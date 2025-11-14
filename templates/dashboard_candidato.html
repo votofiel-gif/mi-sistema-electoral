@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Candidato{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="fas fa-chart-line me-2"></i>Panel de Control - {{ session.nombre }}
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('buscar_votantes') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-search me-2"></i>Buscar Votantes
+        </a>
+    </div>
+</div>
+
+<!-- Estadísticas principales -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="stat-card">
+            <div class="icon text-primary">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="number">{{ total_votantes }}</div>
+            <div class="label">Total de Votantes Registrados</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card">
+            <div class="icon text-success">
+                <i class="fas fa-user-friends"></i>
+            </div>
+            <div class="number">{{ total_colaboradores }}</div>
+            <div class="label">Colaboradores Activos</div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico de desempeño -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Desempeño por Colaborador</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartDesempeno"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Ranking de Colaboradores</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Posición</th>
+                            <th>Colaborador</th>
+                            <th>Votantes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for colaborador in votantes_por_colaborador %}
+                        <tr>
+                            <td>
+                                {% if loop.index == 1 %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-trophy"></i> #{{ loop.index }}
+                                </span>
+                                {% elif loop.index == 2 %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-medal"></i> #{{ loop.index }}
+                                </span>
+                                {% elif loop.index == 3 %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-medal"></i> #{{ loop.index }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">#{{ loop.index }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ colaborador.nombre }}</strong></td>
+                            <td>
+                                <span class="badge bg-primary">{{ colaborador.total }} votantes</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mapa de votantes -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Mapa de Votantes</h5>
+    </div>
+    <div class="card-body">
+        <div id="map"></div>
+    </div>
+</div>
+
+<!-- Lista de votantes -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Listado de Votantes</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Cédula</th>
+                        <th>Teléfono</th>
+                        <th>Dirección</th>
+                        <th>Escuela</th>
+                        <th>Colaborador</th>
+                        <th>Foto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for votante in votantes %}
+                    <tr>
+                        <td>{{ votante.id }}</td>
+                        <td><strong>{{ votante.nombre_completo }}</strong></td>
+                        <td>
+                            {% if votante.numero_cedula %}
+                            <span class="badge bg-info">{{ votante.numero_cedula }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if votante.telefono %}
+                            <a href="tel:{{ votante.telefono }}">
+                                <i class="fas fa-phone me-1"></i>{{ votante.telefono }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ votante.direccion or '-' }}</td>
+                        <td>{{ votante.escuela_votacion or '-' }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ votante.colaborador }}</span>
+                        </td>
+                        <td>
+                            {% if votante.foto %}
+                            <img src="{{ url_for('uploaded_file', filename=votante.foto) }}" 
+                                 alt="Foto" class="foto-votante-thumbnail"
+                                 onclick="mostrarFoto('{{ url_for('uploaded_file', filename=votante.foto) }}', '{{ votante.nombre_completo }}', '{{ votante.numero_cedula or '' }}')">
+                            {% else %}
+                            <span class="text-muted">Sin foto</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Gráfico de desempeño
+    const colaboradores = {{ votantes_por_colaborador | tojson }};
+    const nombres = colaboradores.map(c => c.nombre);
+    const totales = colaboradores.map(c => c.total);
+    
+    const ctx = document.getElementById('chartDesempeno').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: nombres,
+            datasets: [{
+                label: 'Votantes Registrados',
+                data: totales,
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Mapa con Leaflet
+    const votantes = {{ votantes | tojson }};
+    
+    // Inicializar mapa centrado en una ubicación por defecto
+    let centerLat = -25.2637;
+    let centerLng = -57.5759;
+    
+    if (votantes.length > 0) {
+        centerLat = votantes[0].latitud;
+        centerLng = votantes[0].longitud;
+    }
+    
+    const map = L.map('map').setView([centerLat, centerLng], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Añadir marcadores para cada votante
+    votantes.forEach(votante => {
+        if (votante.latitud && votante.longitud) {
+            const marker = L.marker([votante.latitud, votante.longitud]).addTo(map);
+            
+            let popupContent = `
+                <div style="min-width: 200px;">
+                    <h6><strong>${votante.nombre_completo}</strong></h6>
+                    <p class="mb-1"><i class="fas fa-user me-2"></i>${votante.colaborador}</p>
+                    ${votante.telefono ? `<p class="mb-1"><i class="fas fa-phone me-2"></i>${votante.telefono}</p>` : ''}
+                    ${votante.direccion ? `<p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i>${votante.direccion}</p>` : ''}
+                    ${votante.escuela_votacion ? `<p class="mb-0"><i class="fas fa-school me-2"></i>${votante.escuela_votacion}</p>` : ''}
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+        }
+    });
+    
+    // Ajustar zoom para mostrar todos los marcadores
+    if (votantes.length > 1) {
+        const group = L.featureGroup(votantes.map(v => 
+            L.marker([v.latitud, v.longitud])
+        ));
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+</script>
+{% endblock %}

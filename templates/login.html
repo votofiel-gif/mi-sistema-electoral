@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar Sesión - Sistema de Votantes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center" style="margin-top: 80px;">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4><i class="fas fa-vote-yea me-2"></i>Sistema de Gestión de Votantes</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="mb-3">
+                        <label for="usuario" class="form-label">
+                            <i class="fas fa-user me-2"></i>Usuario
+                        </label>
+                        <input type="text" class="form-control" id="usuario" name="usuario" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Contraseña
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                    </button>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-muted small">
+                    <p class="mb-2"><strong>Usuarios de prueba:</strong></p>
+                    <p class="mb-1"><i class="fas fa-user-tie me-2"></i><strong>Candidato:</strong> usuario: <code>candidato</code> / contraseña: <code>admin123</code></p>
+                    <p class="mb-0"><i class="fas fa-users me-2"></i><strong>Colaboradores:</strong> usuario: <code>juan</code>, <code>maria</code> o <code>carlos</code> / contraseña: <code>colaborador123</code></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

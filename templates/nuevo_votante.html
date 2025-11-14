@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Votante{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-user-plus me-2"></i>Registrar Nuevo Votante</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Datos del Votante</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="nombre_completo" class="form-label">
+                            <i class="fas fa-user me-2"></i>Nombre Completo *
+                        </label>
+                        <input type="text" class="form-control" id="nombre_completo" 
+                               name="nombre_completo" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="numero_cedula" class="form-label">
+                            <i class="fas fa-id-card me-2"></i>Número de Cédula
+                        </label>
+                        <input type="text" class="form-control" id="numero_cedula" 
+                               name="numero_cedula" required onchange="validarCedulaUnica()">
+                        <div id="cedula-validation" class="mt-1"></div>
+                        <small class="text-muted">Número de cédula de identidad del votante (único)</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono" class="form-label">
+                                <i class="fas fa-phone me-2"></i>Teléfono
+                            </label>
+                            <input type="tel" class="form-control" id="telefono" name="telefono">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="escuela_votacion" class="form-label">
+                                <i class="fas fa-school me-2"></i>Escuela de Votación
+                            </label>
+                            <input type="text" class="form-control" id="escuela_votacion" 
+                                   name="escuela_votacion">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="direccion" class="form-label">
+                            <i class="fas fa-map-marker-alt me-2"></i>Dirección
+                        </label>
+                        <input type="text" class="form-control" id="direccion" name="direccion">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-map-marked-alt me-2"></i>Ubicación en el Mapa
+                        </label>
+                        <div id="map" style="height: 400px; border-radius: 10px; position: relative;"></div>
+                        <small class="text-muted">
+                            <i class="fas fa-crosshairs me-1"></i>Usa el botón GPS <i class="fas fa-crosshairs me-1"></i> para obtener tu ubicación automáticamente, o haz clic en el mapa para marcarla manualmente
+                        </small>
+                        <input type="hidden" id="latitud" name="latitud">
+                        <input type="hidden" id="longitud" name="longitud">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="foto" class="form-label">
+                            <i class="fas fa-camera me-2"></i>Foto del Votante
+                        </label>
+                        <input type="file" class="form-control" id="foto" name="foto" 
+                               accept="image/*">
+                        <small class="text-muted">Formatos permitidos: JPG, PNG, GIF (máx. 16MB)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notas" class="form-label">
+                            <i class="fas fa-sticky-note me-2"></i>Notas Adicionales
+                        </label>
+                        <textarea class="form-control" id="notas" name="notas" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('dashboard_colaborador') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Guardar Votante
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Instrucciones:</strong></p>
+                <ul>
+                    <li>Completa al menos el nombre del votante</li>
+                    <li>El teléfono es importante para contactar al votante</li>
+                    <li>Para la ubicación puedes:
+                        <ul style="margin-top: 5px;">
+                            <li>Hacer clic en el mapa (manual)</li>
+                            <li>Usar el botón GPS (📍) para auto-detectar</li>
+                        </ul>
+                    </li>
+                    <li>Sube una foto para identificar al votante</li>
+                    <li>La escuela de votación es donde debe ir a votar</li>
+                </ul>
+                <hr>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <small>Estos datos ayudarán a planificar la logística de transporte el día de las elecciones</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Inicializar mapa - centrado en Asunción, Paraguay por defecto
+    const map = L.map('map').setView([-25.2637, -57.5759], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    let marker = null;
+    let bloqueandoGPS = false; // ✅ Flag para evitar conflictos GPS
+    
+    // Manejar clic en el mapa (edición manual)
+    map.on('click', function(e) {
+        // ✅ ANTICONFLICTO: Verificar si GPS está activo
+        if (bloqueandoGPS) {
+            console.log('🚫 Click en mapa IGNORADO - GPS activo');
+            return;
+        }
+        
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        // Actualizar campos ocultos
+        document.getElementById('latitud').value = lat.toFixed(6);
+        document.getElementById('longitud').value = lng.toFixed(6);
+        
+        // Eliminar marcador anterior si existe
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        
+        // Crear nuevo marcador
+        marker = L.marker([lat, lng]).addTo(map);
+        marker.bindPopup('<b>Ubicación seleccionada</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6)).openPopup();
+        console.log('✅ Click manual en mapa ejecutado');
+    });
+    
+    // ✅ ANTICONFLICTO GPS: Override función GPS para activar flag
+    const originalObtenerUbicacionGPS = window.obtenerUbicacionGPS;
+    window.obtenerUbicacionGPS = function(latitudId, longitudId, mapId) {
+        console.log('🚫 ACTIVANDO BLOQUEO ANTI-CONFLICTO GPS');
+        bloqueandoGPS = true;
+        
+        // Ejecutar función GPS original
+        originalObtenerUbicacionGPS.call(this, latitudId, longitudId, mapId);
+        
+        // Resetear flag después del proceso GPS
+        setTimeout(() => {
+            bloqueandoGPS = false;
+            console.log('✅ BLOQUEO ANTI-CONFLICTO GPS DESACTIVADO');
+        }, 5000);
+    };
+    
+    // ❌ ELIMINADO: Inicialización automática GPS para evitar interferencias
+    // La ubicación ahora solo se obtiene mediante el botón GPS con confirmación del usuario
+    console.log('🗺️ Mapa inicializado sin geolocalización automática');
+    
+    // Agregar botón GPS al mapa
+    agregarBotonGPS('map', 'latitud', 'longitud');
+    
+    // Almacenar referencia global al mapa para GPS
+    window.mapas = window.mapas || {};
+    window.mapas['map'] = map;
+
+    // Validación de cédula única en tiempo real
+    let cedulaTimeout;
+    function validarCedulaUnica() {
+        const cedulaInput = document.getElementById('numero_cedula');
+        const validationDiv = document.getElementById('cedula-validation');
+        const cedula = cedulaInput.value.trim();
+        
+        // Limpiar timeout anterior
+        clearTimeout(cedulaTimeout);
+        
+        if (!cedula) {
+            validationDiv.innerHTML = '';
+            return;
+        }
+        
+        // Validación visual inmediata
+        cedulaInput.classList.remove('is-valid', 'is-invalid');
+        
+        // Mostrar indicador de carga
+        validationDiv.innerHTML = '<small><i class="fas fa-spinner fa-spin me-1"></i>Verificando...</small>';
+        
+        // Esperar 500ms antes de validar para evitar muchas consultas
+        cedulaTimeout = setTimeout(() => {
+            fetch(`/validar/cedula/${encodeURIComponent(cedula)}`)
+                .then(response => response.json())
+                .then(data => {
+                    validationDiv.innerHTML = '';
+                    
+                    if (data.valida) {
+                        cedulaInput.classList.add('is-valid');
+                        validationDiv.innerHTML = `<small class="text-success"><i class="fas fa-check me-1"></i>${data.mensaje}</small>`;
+                    } else {
+                        cedulaInput.classList.add('is-invalid');
+                        validationDiv.innerHTML = `<small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>${data.mensaje}</small>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error validando cédula:', error);
+                    validationDiv.innerHTML = '<small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Error al validar</small>';
+                });
+        }, 500);
+    }
+</script>
+{% endblock %}

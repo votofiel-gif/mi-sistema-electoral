@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Colaborador{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-user-plus me-2"></i>Crear Nuevo Colaborador</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Datos del Colaborador</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">
+                            <i class="fas fa-user me-2"></i>Nombre Completo *
+                        </label>
+                        <input type="text" class="form-control" id="nombre" 
+                               name="nombre" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="usuario" class="form-label">
+                            <i class="fas fa-id-badge me-2"></i>Usuario *
+                        </label>
+                        <input type="text" class="form-control" id="usuario" 
+                               name="usuario" required>
+                        <small class="text-muted">
+                            Este será el nombre de usuario para iniciar sesión
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Contraseña *
+                        </label>
+                        <input type="password" class="form-control" id="password" 
+                               name="password" required>
+                        <small class="text-muted">
+                            Mínimo 6 caracteres
+                        </small>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('lista_colaboradores') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Crear Colaborador
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>¿Qué es un colaborador?</strong></p>
+                <p>Los colaboradores son las personas encargadas de registrar votantes en el sistema.</p>
+                
+                <hr>
+                
+                <p><strong>Permisos de los colaboradores:</strong></p>
+                <ul>
+                    <li>Registrar nuevos votantes</li>
+                    <li>Editar sus propios registros</li>
+                    <li>Ver lista de votantes que registraron</li>
+                    <li>Subir fotos y ubicaciones</li>
+                </ul>
+                
+                <hr>
+                
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Consejo:</strong> Comparte las credenciales de acceso con el colaborador de forma segura
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

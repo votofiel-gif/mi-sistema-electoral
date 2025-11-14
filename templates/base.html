@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Gestión de Votantes{% endblock %}</title>
+    
+    <!-- ✅ ANTI-CACHÉ HEADERS PARA FORZAR RECARGA -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="{{ 1702512000 }}">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ✅ INDICADOR ANTI-CACHÉ -->
+    <script>
+        console.log('📱 VERSIÓN LIMPIA: 2025-11-14-04-44');
+        console.log('🚨🚨🚨 SI VES ESTE MENSAJE, LA PÁGINA SE RECARGÓ CORRECTAMENTE');
+    </script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: white !important;
+        }
+        
+        .navbar-custom .nav-link:hover {
+            color: #ecf0f1 !important;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+        }
+        
+        /* Estilos para fotos clicables */
+        .foto-votante-thumbnail {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 2px solid #dee2e6;
+        }
+        
+        .foto-votante-thumbnail:hover {
+            transform: scale(1.1);
+            border-color: var(--secondary-color);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* Modal para fotos ampliadas */
+        .modal-foto {
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+        
+        .modal-foto img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+        
+        /* Botón GPS */
+        .btn-gps {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .btn-gps:hover {
+            background: #219a52;
+            transform: scale(1.1);
+        }
+        
+        .btn-gps.loading {
+            background: #f39c12;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Estilos para marcador GPS temporal */
+        .gps-marker-temp {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .btn-primary {
+            background: var(--secondary-color);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stat-card .label {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .foto-votante {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+        
+        .foto-votante-thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            object-fit: cover;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if session.user_id %}
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-vote-yea me-2"></i>
+                Sistema de Votantes
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if session.rol == 'candidato' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard_candidato') }}">
+                            <i class="fas fa-chart-line me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('buscar_votantes') }}">
+                            <i class="fas fa-search me-1"></i>Buscar
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('lista_colaboradores') }}">
+                            <i class="fas fa-users me-1"></i>Colaboradores
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard_colaborador') }}">
+                            <i class="fas fa-list me-1"></i>Mis Votantes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('buscar_votantes') }}">
+                            <i class="fas fa-search me-1"></i>Buscar
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('nuevo_votante') }}">
+                            <i class="fas fa-plus-circle me-1"></i>Nuevo Votante
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>{{ session.nombre }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Modal para ver fotos ampliadas -->
+    <div class="modal fade" id="modalFoto" tabindex="-1" aria-labelledby="modalFotoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-foto">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalFotoLabel">
+                        <i class="fas fa-camera me-2"></i>Foto del Votante
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="imagenAmpliada" src="" alt="Foto del votante" class="img-fluid">
+                    <div id="infoFoto" class="mt-3">
+                        <h6 id="nombreVotante"></h6>
+                        <p id="cedulaVotante" class="text-muted"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- JavaScript para modal de fotos -->
+    <script>
+        // Función para mostrar foto en modal
+        function mostrarFoto(fotoSrc, nombre, cedula) {
+            const modal = new bootstrap.Modal(document.getElementById('modalFoto'));
+            const imagen = document.getElementById('imagenAmpliada');
+            const nombreVotante = document.getElementById('nombreVotante');
+            const cedulaVotante = document.getElementById('cedulaVotante');
+            
+            imagen.src = fotoSrc;
+            nombreVotante.textContent = nombre;
+            cedulaVotante.textContent = cedula ? `Cédula: ${cedula}` : 'Sin número de cédula';
+            
+            modal.show();
+        }
+        
+        // Función para geolocalización GPS - VERSIÓN CORREGIDA CON DIAGNÓSTICO
+        // ✅ ANTI-CACHÉ: Variable para forzar recarga de JavaScript
+        window.GPS_VERSION = '2025-11-14-04-03';
+        
+        // ✅ ANTI-AUTO-GUARDADO: Flag global para bloquear guardados automáticos
+        window.GPS_AUTO_GUARDADO_BLOQUEADO = true;
+        window.GPS_CONFIRMADO_POR_USUARIO = false;
+        
+        // ✅ FUNCIÓN GLOBAL: Hacer disponible desde formularios
+        window.GPS_ORIGINAL = null;
+        
+        // ✅ ALMACENAR FUNCIÓN GPS ORIGINAL
+        if (typeof window.obtenerUbicacionGPS === 'function') {
+            window.GPS_ORIGINAL = window.obtenerUbicacionGPS;
+        }
+        
+        function obtenerUbicacionGPS(latitudId, longitudId, mapId) {
+            console.log('📍 GPS iniciado por usuario');
+            const nombreField = document.getElementById('nombre');
+            const latField = document.getElementById(latitudId);
+            const lngField = document.getElementById(longitudId);
+            
+            console.log('📊 Estado del formulario:', {
+                nombreValue: nombreField ? nombreField.value : 'NO_ENCONTRADO',
+                latValue: latField ? latField.value : 'NO_ENCONTRADO', 
+                lngValue: lngField ? lngField.value : 'NO_ENCONTRADO'
+            });
+            
+            const btnGps = document.querySelector(`#${mapId}`).parentNode.querySelector('.btn-gps');
+            
+            if (!navigator.geolocation) {
+                alert('❌ Tu navegador no soporta geolocalización');
+                return;
+            }
+            
+            // ✅ Verificación manual del usuario
+            window.GPS_CONFIRMADO_POR_USUARIO = true;
+            
+            // Mostrar estado de carga
+            btnGps.classList.add('loading');
+            btnGps.innerHTML = '<i class="fas fa-spinner"></i>';
+            
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000 // 5 minutos
+            };
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    console.log('📍 GPS obtenido:', lat.toFixed(6), ',', lng.toFixed(6));
+                    
+                    // ✅ SOLO MOSTRAR EN MAPA - NO TOCAR CAMPOS HIDDEN
+                    // Centrar mapa en la ubicación GPS (solo visualización)
+                    if (typeof window.mapas !== 'undefined' && window.mapas[mapId]) {
+                        window.mapas[mapId].setView([lat, lng], 16);
+                        
+                        // Mostrar marcador temporal GPS (visualización únicamente)
+                        if (window.mapas[mapId].gpsMarker) {
+                            window.mapas[mapId].removeLayer(window.mapas[mapId].gpsMarker);
+                        }
+                        
+                        window.mapas[mapId].gpsMarker = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'gps-marker-temp',
+                                html: '<div style="background: #ff4444; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10]
+                            })
+                        }).addTo(window.mapas[mapId]).bindPopup('<b>📍 GPS Encontrado</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6) + '<br><small class="text-success">Haz clic en "Aceptar" para aplicar estas coordenadas</small>').openPopup();
+                    }
+                    
+                    // Restaurar botón
+                    btnGps.classList.remove('loading');
+                    btnGps.innerHTML = '<i class="fas fa-crosshairs"></i>';
+                    
+                    // ✅ CONFIRMACIÓN OBLIGATORIA - SIN EXCEPCIONES
+                    setTimeout(() => {
+                        console.log('🔔 MOSTRANDO VENTANA DE CONFIRMACIÓN...');
+                        const confirmado = confirm(`📍 Ubicación GPS Obtenida:\n\nLatitud: ${lat.toFixed(6)}\nLongitud: ${lng.toFixed(6)}\n\n¿Deseas usar esta ubicación GPS?\n\n• Aceptar = Aplicar coordenadas GPS\n• Cancelar = Mantener ubicación manual actual`);
+                        
+                        console.log(confirmado ? '✅ GPS confirmado por usuario' : '❌ GPS cancelado por usuario');
+                        
+                        if (confirmado) {
+                            aplicarCoordenadasGPS(lat, lng, latitudId, longitudId, mapId);
+                        } else {
+                            console.log('❌ GPS cancelado por el usuario');
+                            // Reset flag
+                            window.GPS_CONFIRMADO_POR_USUARIO = false;
+                            
+                            // Si cancela, limpiar el marcador temporal
+                            if (typeof window.mapas !== 'undefined' && window.mapas[mapId] && window.mapas[mapId].gpsMarker) {
+                                window.mapas[mapId].removeLayer(window.mapas[mapId].gpsMarker);
+                            }
+                            alert('ℹ️ GPS cancelado. Puedes hacer clic manualmente en el mapa para establecer la ubicación.');
+                        }
+                    }, 1000); // 1 segundo de delay para que se vea el botón normal
+                    
+                },
+                function(error) {
+                    let mensaje = '❌ Error al obtener ubicación GPS';
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            mensaje = '❌ Permisos de ubicación denegados. Por favor, permite el acceso a la ubicación en tu navegador.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            mensaje = '❌ Información de ubicación no disponible. Verifica que tengas GPS activado.';
+                            break;
+                        case error.TIMEOUT:
+                            mensaje = '❌ Tiempo de espera agotado. Intenta de nuevo.';
+                            break;
+                    }
+                    
+                    console.log('❌ Error GPS:', mensaje);
+                    alert(mensaje);
+                    
+                    // Restaurar botón
+                    btnGps.classList.remove('loading');
+                    btnGps.innerHTML = '<i class="fas fa-crosshairs"></i>';
+                    window.GPS_CONFIRMADO_POR_USUARIO = false;
+                },
+                options
+            );
+        }
+        
+        // ✅ NUEVA FUNCIÓN SIMPLIFICADA PARA APLICAR GPS
+        function aplicarCoordenadasGPS(lat, lng, latitudId, longitudId, mapId) {
+            // 🚨 ALERTA CRÍTICA: Esta función SOLO debe llamarse tras confirmación
+            console.log('📍 Aplicando coordenadas GPS');
+            
+            // ✅ VALIDACIÓN CRÍTICA: Solo permitir si viene del flujo confirmado
+            if (!window.GPS_CONFIRMADO_POR_USUARIO) {
+                console.error('🚨🚨🚨 ALERTA: aplicarCoordenadasGPS llamado SIN confirmación del usuario!');
+                console.error('🚨🚨🚨 ESTO ES UN PROBLEMA - Bloqueando actualización');
+                alert('🚨 Error: GPS no puede aplicarse sin confirmación del usuario');
+                return;
+            }
+            
+            if (!window.GPS_AUTO_GUARDADO_BLOQUEADO) {
+                console.error('🚨🚨🚨 ALERTA: Auto-guardado no está bloqueado!');
+                console.error('🚨🚨🚨 ESTO ES UN PROBLEMA - Bloqueando actualización');
+                alert('🚨 Error: Sistema anti-auto-guardado no activado');
+                return;
+            }
+            
+            console.log('✅ Validaciones pasadas - Aplicando coordenadas');
+            
+            // ✅ ACTUALIZAR CAMPOS HIDDEN SOLO AQUÍ
+            const latField = document.getElementById(latitudId);
+            const lngField = document.getElementById(longitudId);
+            
+            if (latField && lngField) {
+                const oldLat = latField.value;
+                const oldLng = lngField.value;
+                
+                latField.value = lat.toFixed(6);
+                lngField.value = lng.toFixed(6);
+                
+                console.log('✅ Campos hidden actualizados:', {
+                    antes: { lat: oldLat, lng: oldLng },
+                    despues: { lat: latField.value, lng: lngField.value }
+                });
+            } else {
+                console.error('❌ No se encontraron campos hidden:', latitudId, longitudId);
+                alert('❌ Error: No se pudieron actualizar las coordenadas GPS');
+                return;
+            }
+            
+            // ✅ ACTUALIZAR MAPA
+            if (typeof window.mapas !== 'undefined' && window.mapas[mapId]) {
+                // Remover marcador temporal GPS
+                if (window.mapas[mapId].gpsMarker) {
+                    window.mapas[mapId].removeLayer(window.mapas[mapId].gpsMarker);
+                    console.log('🗑️ Marcador temporal GPS removido');
+                }
+                
+                // Crear marcador permanente
+                if (window.mapas[mapId].marker) {
+                    window.mapas[mapId].removeLayer(window.mapas[mapId].marker);
+                }
+                
+                window.mapas[mapId].marker = L.marker([lat, lng]).addTo(window.mapas[mapId]);
+                window.mapas[mapId].marker.bindPopup('<b>✅ GPS Aplicado</b><br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6)).openPopup();
+                console.log('✅ Marcador GPS permanente creado en el mapa');
+            }
+            
+            // ✅ MOSTRAR MENSAJE DE ÉXITO
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 end-0 m-3 bg-success text-white p-3 rounded';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = '<i class="fas fa-check me-2"></i>✅ Ubicación GPS aplicada correctamente<br><small>Solo tras tu confirmación</small>';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+            
+            // ✅ Reset flag después de aplicar
+            window.GPS_CONFIRMADO_POR_USUARIO = false;
+            
+            console.log('✅ GPS aplicado exitosamente');
+        }
+        
+        // ✅ BLOQUEADOR DE EVENTOS: Prevenir guardado automático
+        document.addEventListener('DOMContentLoaded', function() {
+            // ✅ Protección GPS activada
+            const formularios = document.querySelectorAll('form');
+            formularios.forEach(formulario => {
+                
+                // 🛡️ BLOQUEAR submits automáticos de validación HTML5
+                formulario.addEventListener('submit', function(e) {
+                    // Verificar si es un submit automático o manual
+                    const submitButton = e.submitter;
+                    const botonGuardar = formulario.querySelector('button[type="submit"]');
+                    
+                    if (submitButton && botonGuardar && submitButton === botonGuardar) {
+                        console.log('✅ Formulario de guardado detectado - Permitiendo envío');
+                    } else {
+                        console.log('🚫 Bloqueando submit automático de validación HTML5');
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        return false;
+                    }
+                });
+                
+                // 🛡️ Intervenir validación de campos requeridos
+                formulario.addEventListener('input', function(e) {
+                    if (e.target.hasAttribute('required')) {
+                        // Validación silenciosa - sin mensajes de consola
+                        setTimeout(() => {
+                            if (formulario.checkValidity()) {
+                                // Formulario válido pero no se envía automáticamente
+                            }
+                        }, 100);
+                    }
+                });
+            });
+            
+            // ✅ Banner visual removido por solicitud del usuario
+            
+            // Sistema GPS activado silenciosamente
+        });
+        
+        // Función para crear botón GPS en mapas
+        function agregarBotonGPS(mapId, latitudId, longitudId) {
+            const mapContainer = document.querySelector(`#${mapId}`).parentNode;
+            
+            const btnGps = document.createElement('button');
+            btnGps.className = 'btn btn-gps';
+            btnGps.innerHTML = '<i class="fas fa-crosshairs"></i>';
+            btnGps.title = '📍 Obtener mi ubicación GPS (pedirá confirmación)';
+            btnGps.style.cssText = 'position: absolute; top: 10px; right: 10px; z-index: 1000; background: #007bff; color: white; border: none; border-radius: 50%; width: 40px; height: 40px;';
+            
+            // ✅ CRÍTICO: Evitar propagación al mapa
+            btnGps.addEventListener('click', function(e) {
+                console.log('📍 BOTÓN GPS CLICKEADO - EVENT STOP PROPAGATION');
+                e.stopPropagation(); // ❌ EVITA que el click llegue al mapa
+                obtenerUbicacionGPS(latitudId, longitudId, mapId);
+            });
+            
+            // También mantener el onclick como fallback
+            btnGps.onclick = function(e) {
+                console.log('📍 BOTÓN GPS CLICKEADO (onclick fallback)');
+                e.stopPropagation();
+                obtenerUbicacionGPS(latitudId, longitudId, mapId);
+            };
+            
+            mapContainer.style.position = 'relative';
+            mapContainer.appendChild(btnGps);
+            
+            // Botón GPS creado
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

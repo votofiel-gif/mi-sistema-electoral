@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Votantes - Campo</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#007bff">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icons/icon-192x192.png">
+    
+    <!-- Styles -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .actions {
+            padding: 30px 20px;
+        }
+        
+        .action-card {
+            background: white;
+            border: 2px solid #f0f0f0;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .action-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,123,255,0.1);
+        }
+        
+        .action-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+        }
+        
+        .action-card p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            background: #007bff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status.online {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status.offline {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #f0f0f0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input:focus {
+            border-color: #007bff;
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,123,255,0.3);
+            transition: transform 0.3s;
+        }
+        
+        .floating-action:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="status online" id="status">● Online</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🗳️ Gestión de Votantes</h1>
+            <p>Campaña Electoral 2025</p>
+        </div>
+        
+        <div class="actions">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="🔍 Buscar votante..." 
+                       id="searchInput" onkeyup="buscarVotante()">
+            </div>
+            
+            <div class="action-card" onclick="nuevoVotante()">
+                <h3><span class="icon">+</span>Nuevo Votante</h3>
+                <p>Registrar un nuevo votante con GPS y foto</p>
+            </div>
+            
+            <div class="action-card" onclick="miEquipo()">
+                <h3><span class="icon">👥</span>Mi Equipo</h3>
+                <p>Ver voters registrados por mi y mis colaboradores</p>
+            </div>
+            
+            <div class="action-card" onclick="estadisticas()">
+                <h3><span class="icon">📊</span>Estadísticas</h3>
+                <p>Ver progreso de registro y estadísticas</p>
+            </div>
+            
+            <div class="action-card" onclick="sincronizar()">
+                <h3><span class="icon">🔄</span>Sincronizar</h3>
+                <p>Sincronizar datos con el servidor</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="floating-action" onclick="accesoRapido()">
+        ⚡
+    </div>
+
+    <script>
+        // PWA Setup
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+        
+        // Online/Offline Status
+        function updateStatus() {
+            const status = document.getElementById('status');
+            if (navigator.onLine) {
+                status.textContent = '● Online';
+                status.className = 'status online';
+            } else {
+                status.textContent = '● Offline';
+                status.className = 'status offline';
+            }
+        }
+        
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus();
+        
+        // Funciones principales
+        function nuevoVotante() {
+            alert('📱 Nueva función: Registro rápido desde móvil\n\nPróximamente: Formulario optimizado para móvil con GPS automático');
+        }
+        
+        function miEquipo() {
+            alert('📊 Función: Ver estadísticas de tu equipo\n\nPróximamente: Dashboard con progreso y metas');
+        }
+        
+        function estadisticas() {
+            alert('📈 Función: Estadísticas completas\n\nPróximamente: Gráficos interactivos y reportes');
+        }
+        
+        function sincronizar() {
+            if (navigator.onLine) {
+                alert('🔄 Sincronizando datos...\n\n✅ Datos actualizados en el servidor');
+            } else {
+                alert('📱 Sin conexión\n\nLos datos se sincronizarán automáticamente cuando tengas internet');
+            }
+        }
+        
+        function buscarVotante() {
+            const query = document.getElementById('searchInput').value;
+            if (query.length >= 3) {
+                console.log('Buscando:', query);
+                // Aquí iría la búsqueda en tiempo real
+            }
+        }
+        
+        function accesoRapido() {
+            alert('⚡ Acceso Rápido\n\nPróximamente: Menú de funciones frecuentes');
+        }
+        
+        // Instalar PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostrar botón de instalación
+            const installBtn = document.createElement('div');
+            installBtn.innerHTML = `
+                <div style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+                           background: #28a745; color: white; padding: 12px 24px; border-radius: 25px;
+                           cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(40,167,69,0.3);"
+                     onclick="installPWA()">
+                    📱 Instalar App
+                </div>
+            `;
+            document.body.appendChild(installBtn);
+            
+            setTimeout(() => {
+                installBtn.remove();
+            }, 10000);
+        });
+        
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        alert('✅ App instalada correctamente');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
